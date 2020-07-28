@@ -24,16 +24,23 @@ public class DemoApplication extends WebSecurityConfigurerAdapter {
 		return Collections.singletonMap("name", principal.getAttribute("name"));
 	}
 
+	@GetMapping("/error")
+	public String error() {
+
+		String message = (String) request.getSession().getAttribute("error.message");
+		request.getSession().removeAttribute("error.message");
+		return message;
+	}
+
 	@Override
 	protected void configure(HttpSecurity http) throws Exception {
 		http
-				// ... existing code here
-				.csrf(c -> c.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
+				
+			.csrf(c -> c.csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse()))
 
 				// Adding a Logout Endpoint
 
-				// ... existing code here
-				.logout(l -> l.logoutSuccessUrl("/").permitAll())
+			.logout(l -> l.logoutSuccessUrl("/").permitAll())
 				// ... existing code here
 				// @formatter:on
 
@@ -42,12 +49,22 @@ public class DemoApplication extends WebSecurityConfigurerAdapter {
             .authorizeRequests(a -> a
                 .antMatchers("/", "/error", "/webjars/**").permitAll()
                 .anyRequest().authenticated()
-            )
+			)
+			
             .exceptionHandling(e -> e
                 .authenticationEntryPoint(new HttpStatusEntryPoint(HttpStatus.UNAUTHORIZED))
-            )
+			)
+			
             .oauth2Login();
 		// @formatter:on
+
+		//Adding an error message
+		  	.oauth2Login(o -> o
+			.failureHandler((request, response, exception) -> {
+			request.getSession().setAttribute("error.message", exception.getMessage());
+			handler.onAuthenticationFailure(request, response, exception);
+			})
+		);
 
 	}
 
